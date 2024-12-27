@@ -12,9 +12,9 @@ __version__ = get_version()
 
 ext_modules = [
     Pybind11Extension("adafruit_raspberry_pi5_neopixel_write",
-        ["src/main.cpp", "src/utils/piolib/piolib.c", "src/utils/piolib/pio_rp1.c"],
+        ["src/main.cpp", "src/piolib.c", "src/pio_rp1.c"],
         define_macros = [('VERSION_INFO', __version__)],
-        include_dirs = ['./src/utils/piolib/include'],
+        include_dirs = ['./src/include'],
         # use this setting when debugging
         #extra_compile_args = ["-g3", "-Og"],
         ),

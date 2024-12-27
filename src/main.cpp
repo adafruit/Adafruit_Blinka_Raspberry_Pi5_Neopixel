@@ -2,7 +2,7 @@
 #include <pybind11/pybind11.h>
 
 #include "piolib.h"
-#include "utils/piolib/examples/ws2812.pio.h"
+#include "ws2812.pio.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)

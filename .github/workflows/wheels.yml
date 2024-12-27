@@ -37,13 +37,13 @@ jobs:
 
 
   build_wheels:
-    name: Wheels on ${{ matrix.os }}${{ matrix.extra }}
+    name: Wheels on ${{ matrix.os }} ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        arch_linux: ["aarch64"]
+        arch: ["aarch64", "armv7l"]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -57,7 +57,7 @@ jobs:
 
     - uses: pypa/cibuildwheel@v2.22.0
       env:
-        CIBW_ARCHS_LINUX: ${{ matrix.arch_linux }}
+        CIBW_ARCHS_LINUX: ${{ matrix.arch }}
         CIBW_BUILD: "cp311-manylinux* cp312-manylinux* cp313-manylinux*"
         CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_28"
     - name: Verify clean directory
@@ -67,7 +67,7 @@ jobs:
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheel-${{ matrix.os }}${{ matrix.artifact-extra }}
+        name: wheel-${{ matrix.os }}${{ matrix.arch }}
         path: wheelhouse/*.whl
         compression-level: 0
         if-no-files-found: error
