@@ -1,4 +1,5 @@
 #include <iostream>
+#include <time.h>
 #include <pybind11/pybind11.h>
 
 #include "piolib.h"
@@ -14,6 +15,19 @@ static int sm{-1};
 static int offset{-1};
 static int last_gpio{-1};
 static size_t last_size{};
+static struct timespec deadline;
+
+constexpr auto NS_PER_SECOND = 1'000'000'000l;
+constexpr auto NS_PER_MS = 1'000'000l;
+
+static void timespec_add_ns(struct timespec &out, const struct timespec &in, long ns) {
+    out = in;
+    out.tv_nsec += ns;
+    if(out.tv_nsec > NS_PER_SECOND) {
+        out.tv_nsec -= NS_PER_SECOND;
+        out.tv_sec += 1;
+    }
+}
 
 static void neopixel_write(py::object gpio_obj, py::buffer buf) {
     int gpio = py::getattr(gpio_obj, "_pin", gpio_obj).attr("id").cast<int>();
@@ -39,15 +53,15 @@ static void neopixel_write(py::object gpio_obj, py::buffer buf) {
         offset = pio_add_program(pio, &ws2812_program);
 
         pio_sm_clear_fifos(pio, sm);
-        pio_sm_set_clkdiv(pio, sm, 1.0);
-
-        last_gpio = -1;
-    }
-
-    if (gpio != last_gpio) {
         ws2812_program_init(pio, sm, offset, gpio, 800000.0, true);
-        last_gpio = gpio;
+    } else {
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL);
+        if (gpio != last_gpio) {
+            ws2812_program_init(pio, sm, offset, gpio, 800000.0, true);
+        }
     }
+    last_gpio = gpio;
+
 
     size_t size = info.size * info.itemsize;
 
@@ -75,6 +89,15 @@ static void neopixel_write(py::object gpio_obj, py::buffer buf) {
     if (pio_sm_xfer_data(pio, sm, PIO_DIR_TO_SM, data_size, &vec[0])) {
         throw std::runtime_error("pio_sm_xfer_data() failed");
     }
+
+    // Track the earliest time at which we can start a fresh neopixel transmission.
+    // This needs to be long enough that all bits have been clocked out (the FIFO can
+    // contain 16 entries of 32 bits each, taking 640us to transmit) plus the ws2812
+    // required idle time ("RET code") of 50usmin. These sum to around 700us, so the 1ms
+    // delay is generous.
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    timespec_add_ns(deadline, ts, NS_PER_MS);
 }
 
 static void free_pio(void) {
