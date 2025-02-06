@@ -22,3 +22,7 @@ python:
       path: .
       extra_requirements:
         - docs
+
+sphinx:
+  # Path to your Sphinx configuration file.
+  configuration: docs/conf.py
